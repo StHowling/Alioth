@@ -1,0 +1,29 @@
+mkdir /mnt/cdrom
+mount .../cpu2006-1.2.iso /mnt/cdrom
+cd /mnt/cdrom
+./install.sh
+Choose install folder，recommand: /root/software/cpu2006
+umount /mnt/cdrom
+cd `install folder`
+. ./shrc 
+
+vim /etc/profile
+export SPECPERLLIB="/root/software/cpu2006/bin:/root/software/cpu2006/bin/lib"
+export SPEC=/root/software/cpu2006
+export PATH="$PATH:/root/software/cpu2006/bin"
+
+apt-get install -y gcc-4.9 g++-4.9 gfortran-4.7 gfortran 
+update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 50
+update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 50
+update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-4.7 50
+update-alternatives --config gcc 
+cd config
+cp Example-linux64-amd64-gcc43+.cfg myconfig.cfg
+runspec --config=myconfig.cfg -T base --action=build int 
+
+runspec --config=xxx.cfg --size=ref --noreportable --iterations=x app
+
+rm -Rf $SPEC/benchspec/CPU2006/*/run/run* //clean
+
+
+

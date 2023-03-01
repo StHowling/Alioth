@@ -1,0 +1,11 @@
+debug.log
+*.csv
+*.pickle
+*.zip
+*.pyc
+.vscode
+*.out
+.ipynb_checkpoints/*
+*.pt
+*.log
+*.pdf

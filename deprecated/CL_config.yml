@@ -1,0 +1,19 @@
+experimentName: ContrastiveLeanring
+searchSpaceFile: ./searchspace/CL_searchspace.json
+trialCommand: python CL.py
+trialCodeDirectory: .
+trialGpuNumber: 1
+trialConcurrency: 7
+maxTrialNumber: 500
+tuner:
+  name: TPE
+  classArgs:
+    optimize_mode: minimize
+assessor:
+  name: Medianstop
+  classArgs:
+    optimize_mode: minimize
+    start_step: 5
+trainingService:
+  platform: local
+  useActiveGpu: True

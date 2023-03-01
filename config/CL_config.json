@@ -1,0 +1,25 @@
+{
+    "data_dir": "../data/raw-data/cl_data.csv",
+    "config": "../config/CL_config.json",
+    "save_model": 0,
+    "save_filename": "../model/cl_test.pt",
+    "cuda": 1,
+    "log_interval": 100,
+    "epochs": 200,
+    "lr": 0.003,
+    "input_size": 218,
+    "output_size": 32,
+    "batch_size": 32,
+    "n_views": 2,
+    "temperature": 0.07,
+    "encoder_sizes": [
+        256,
+        128
+    ],
+    "decoder_sizes": [
+        64
+    ],
+    "weight_decay": 0.0001,
+    "drop_n": 0,
+    "dropped_categories":[]
+}

@@ -1,0 +1,35 @@
+/machine-qemu\\x2d7\\x2dinstance\\x2d00000184.scope/ 32u32g stress1
+	emulator: 3-17,21-35,39-53,57-71
+	iothread2?: 3-17,21-35,39-53,57-71
+	vcpu0~15: 3-17,39-53
+	vcpu16~31: 21-35,57-71
+
+/machine-qemu\\x2d8\\x2dinstance\\x2d000003f2.scope/ 16u16g stress2
+	emulator: 3-17,21-35,39-53,57-71
+	iothread2?: 3-17,21-35,39-53,57-71
+	vcpu0~7: 3-17,39-53
+	vcpu8~15: 21-35,57-71
+
+/machine-qemu\\x2d5\\x2dinstance\\x2d0000015a.scope/ 2u4g
+	all: 3-17,39-53
+
+/machine-qemu\\x2d9\\x2dinstance\\x2d0000074a.scope/ 4u8g new-1
+	all: 3-17,39-53
+	
+/machine-qemu\\x2d10\\x2dinstance\\x2d0000074b.scope/ 4u8g new-2
+	all: 21-35,57-71
+
+/machine-qemu\\x2d11\\x2dinstance\\x2d0000074c.scope/ 4u8g new-3
+	all: 3-17,39-53
+
+/machine-qemu\\x2d12\\x2dinstance\\x2d0000074d.scope/ 4u8g new-4
+	all: 21-35,57-71
+
+/machine-qemu\\x2d13\\x2dinstance\\x2d0000074e.scope/ 4u8g new-5
+	all: 3-17,39-53
+
+/machine-qemu\\x2d3\\x2dinstance\\x2d00000156.scope/ 4u8g old-stress
+	all: 3-17,39-53
+
+/machine-qemu\\x2d4\\x2dinstance\\x2d00000159.scope/ 4u8g
+	all: 21-35,57-71
