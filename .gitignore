@@ -8,4 +8,4 @@ debug.log
 .ipynb_checkpoints/*
 *.pt
 *.log
-*.pdf
+/deprecated
