@@ -443,3 +443,11 @@ class DACBIP_random_dataset(Dataset):
 #             x = layer(x)
 #         # print("X:", x)
 #         return x
+
+
+class DADAE(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def forward(self, VM, SoI):
+        pass
