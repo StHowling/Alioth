@@ -1,6 +1,7 @@
 # %%
 import os
 import json
+import numpy as np
 from easydict import EasyDict
 import csv
 
@@ -69,7 +70,7 @@ def merge_parameter(base_params, override_params):
 
 def train_test_split_ratio(data, test_ratio, ratio):
     np.random.seed(42)
-    fo
+
     shuffled_indices = np.random.permutation(len(data))
     test_set_size = int(len(data)) * test_ratio 
     test_indices = shuffled_indices[:test_ratio]
