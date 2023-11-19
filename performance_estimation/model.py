@@ -1,5 +1,6 @@
 # %%
 import os
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -9,7 +10,7 @@ from  torch.nn import init
 from utils import load_args, save_json
 from torch.autograd import Variable
 from easydict import EasyDict
-from typing import Dict
+from typing import Dict, List
 # %%
 class DAE(nn.Module):
     def __init__(self, args):
@@ -22,10 +23,10 @@ class DAE(nn.Module):
             self.encoder.append(nn.ReLU())
 
         self.decoder = nn.ModuleList()
-        for i in range(len(args.decoder_sizes) - 1):
-            self.decoder.append(nn.Linear(args.decoder_sizes[i], args.decoder_sizes[i + 1]))
+        for i in range(len(args.decoder_sizes) - 1, 0, -1):
+            self.decoder.append(nn.Linear(args.encoder_sizes[i], args.encoder_sizes[i - 1]))
             self.decoder.append(nn.ReLU())
-        self.decoder.append(nn.Linear(args.decoder_sizes[-1], args.output_size))
+        self.decoder.append(nn.Linear(args.encoder_sizes[0], args.output_size))
         self.decoder.append(nn.ReLU())
     def forward(self, x):
         for idx, layer in enumerate(self.encoder):
@@ -189,44 +190,29 @@ class CART_random_dataset(Dataset):
     # '3':['milc'],
 
 class DAE_random_dataset(Dataset):
-    def __init__(self, csv_file,app):
-        self.raw_data = pd.read_csv(csv_file)
-        self.raw_data = self.raw_data[(self.raw_data['APP'] == app )]
-        self.raw_label = self.raw_data[(self.raw_data['stress_type'] == 'NO_STRESS' )]
+    def __init__(self, csv_file, selected_apps:List = None,  normalize='minmax'):
+        raw_data = pd.read_csv(csv_file)
+        if selected_apps is not None:
+            raw_data = raw_data.loc[raw_data['app'].isin(selected_apps),:].reset_index(drop=True)
+        if normalize == 'minmax':
+            scaler = MinMaxScaler()
+        elif normalize == 'standard':
+            scaler = StandardScaler()
+        else:
+            raise NotImplementedError
+        metric_vals = raw_data.iloc[:,:-5]
+        array_to_fit = np.concatenate([metric_vals.values[:, :metric_vals.shape[1]//2], metric_vals.iloc[:, metric_vals.shape[1]//2:].drop_duplicates().values],axis=0)
+        scaler.fit(array_to_fit)
 
-        print("--------------------------------data-info---------------------------------------")
-
-        print("workload_intensity,:",list(self.raw_label['WORKLOAD_INTENSITY'].unique()))
-
-        # self.data = pd.DataFrame(data=None, columns = self.raw_data.columns, index = )
-        self.data = pd.DataFrame(data=None)
-
-        for i in list(self.raw_label['WORKLOAD_INTENSITY'].unique()):
-            self.df = self.raw_data[(self.raw_data['WORKLOAD_INTENSITY'] == i )]
-            self.metrics_nostress = self.df[self.df['stress_type']=='NO_STRESS'].drop(['WORKLOAD_INTENSITY','stress_intensity','CATERGORY','stress_type','APP'], axis=1).mean().to_frame().T
-            self.keys = list(self.metrics_nostress.columns)
-            # print(self.metrics_nostress)
-            self.metrics_nostress = self.metrics_nostress.iloc[0, :self.keys.index("IPC")+1].to_frame().T
-            for ik in self.metrics_nostress:#value_keys:
-                #print(ik)
-                self.df['Label_'+ik] = self.metrics_nostress[ik][0]
-            self.data = pd.concat([self.data,self.df],axis = 0)
-
-        # self.data.to_csv("/home/yyx/interference_prediction/Alioth/DATA/etcd+_.csv")
-        self.data = self.data.drop(['WORKLOAD_INTENSITY','stress_intensity','CATERGORY','stress_type','APP','QoS','Unnamed: 0','Label_Unnamed: 0'], axis=1)
-        print(self.data)
-        self.data = np.array(self.data, dtype = 'float32')
-        # self.data = torch.from_numpy(self.data.values).float()
-        self.VM_raw_data = self.data[:,0:218]
-        print(self.VM_raw_data)
-        self.label = self.data[:,218:436]
-        print(self.label)
+        self.stressed_metrics = torch.Tensor(scaler.transform(metric_vals.values[:, :metric_vals.shape[1]//2]))
+        self.label = torch.Tensor(scaler.transform(metric_vals.values[:, metric_vals.shape[1]//2:]))
+        
 
     def __len__(self):
-        return len(self.VM_raw_data)
+        return len(self.stressed_metrics)
 
     def __getitem__(self, idx):
-        return self.VM_raw_data[idx], self.label[idx]
+        return self.stressed_metrics[idx], self.label[idx]
  
 
 

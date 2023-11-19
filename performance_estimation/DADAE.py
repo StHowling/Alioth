@@ -5,6 +5,7 @@ https://github.com/jindongwang/transferlearning/blob/master/code/DeepDA
 from typing import Any, Mapping
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import torch
 import torch.nn as nn
 from torch.autograd import Function
@@ -155,44 +156,34 @@ class ReconstructionLoss(nn.Module):
 
 
 class DADAE_random_dataset(Dataset):
-    def __init__(self, csv_file, apps_to_leave_out:List, target_col='qos1', type='dae'):
+    def __init__(self, csv_file, apps_to_leave_out:List, dtype='dae', normalize='minmax'):
         self.raw_data = pd.read_csv(csv_file)
-        self.type = type
-        idx = self.raw_data['app']!= apps_to_leave_out[0]
+        idx = (self.raw_data['app']!= apps_to_leave_out[0])
+        if normalize == 'minmax':
+            scaler = MinMaxScaler()
+        elif normalize == 'standard':
+            scaler = StandardScaler()
+        else:
+            raise NotImplementedError
         for i in apps_to_leave_out[1:]:
             idx = idx & (self.raw_data['app']!=apps_to_leave_out[i])
-        if self.type == 'dae':   
-            self.raw_data = self.raw_data[idx]
-            apps = set(self.raw_data['app'].unique()) - set(apps_to_leave_out)
+        known_data = self.raw_data.loc[idx,self.raw_data.columns[:-5]]
+        array_to_fit = np.concatenate([known_data.values[:, :known_data.shape[1]//2], known_data.iloc[:, known_data.shape[1]//2:].drop_duplicates().values],axis=0)
+        scaler.fit(array_to_fit)
+        if dtype == 'dae':   
+            data = self.raw_data[idx]
         else:
-            self.raw_data = self.raw_data[~idx] 
-            apps = apps_to_leave_out
+            data = self.raw_data[~idx] 
 
-        self.raw_label = self.raw_data[(self.raw_data['stress_type'] == 'NO_STRESS' )]
-        self.data = pd.DataFrame(data=None)
-        
-        for app in apps:
-            for i in list(self.raw_label['workload'].unique()):
-                self.df = self.raw_data.loc[(self.raw_data['workload'] == i ) & (self.raw_data['app'] == app)]
-                self.metrics_nostress = self.df[self.df['stress_type']=='NO_STRESS'].drop(['workload','stress_intensity','stress_type','app', 'interval'], axis=1).mean().to_frame().T
-                self.keys = list(self.metrics_nostress.columns)
-                # print(self.metrics_nostress)
-                self.metrics_nostress = self.metrics_nostress.iloc[0, :self.keys.index(target_col)].to_frame().T
-                for ik in self.metrics_nostress:#value_keys:
-                    #print(ik)
-                    self.df['Label_'+ik] = self.metrics_nostress[ik][0]
-                self.data = pd.concat([self.data,self.df],axis = 0)
-
-        self.data = self.data.drop(['timestamp','workload','stress_intensity','stress_type','app','qos1', 'qos2', 'interval','Unnamed: 0','Label_Unnamed: 0'], axis=1).values.astype(np.float32)
-        self.VM_raw_data = self.data[:, :self.data.shape[1]//2]
-        self.label = self.data[:, self.data.shape[1]//2:]
+        self.stressed_metrics = torch.Tensor(scaler.transform(data.values[:, :data.shape[1]//2]))
+        self.label = torch.Tensor(scaler.transform(data.values[:, data.shape[1]//2:]))
             
 
     def __len__(self):
-        return len(self.VM_raw_data)
+        return len(self.stressed_metrics)
 
     def __getitem__(self, idx):    
-        return self.VM_raw_data[idx], self.label[idx]
+        return self.stressed_metrics[idx], self.label[idx]
 
 
 

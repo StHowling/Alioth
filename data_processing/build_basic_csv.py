@@ -135,46 +135,49 @@ def process_none_scale(df):
     return df_proc
 
 def get_stress_index(df, appname):
-    stress_index = {}
-    stress_type = list(df["stress_type"].drop_duplicates())
+    stress_type_intensity_to_indices_map = {}
+    stress_type = pd.unique(df["stress_type"])
     for i in stress_type:
-        stress_index[i] = {}
-        stress_intensity = list(df[df["stress_type"] == i]["stress_intensity"].drop_duplicates())
+        stress_type_intensity_to_indices_map[i] = {}
+        stress_intensity = pd.unique(df.loc[df["stress_type"] == i, "stress_intensity"])
         # print(stress_type, stress_intensity)
         for j in stress_intensity:
-            stress_index[i][j] = df[(df["stress_type"] == i) & (df["stress_intensity"] == j)].index
-    # Only consider bottom no_stress index
-    idx = stress_index["NO_STRESS"][0]
-    i = len(idx) - 1
+            stress_type_intensity_to_indices_map[i][j] = df.loc[(df["stress_type"] == i) & (df["stress_intensity"] == j)].index
+
+    # Only consider bottom consecutive no_stress index
+    indices = stress_type_intensity_to_indices_map["NO_STRESS"][0]
+    nostress_starting_idx = len(indices) - 1
     while True:
-        if idx[i - 1] != idx[i] - 1:
+        if indices[nostress_starting_idx - 1] != indices[nostress_starting_idx] - 1 or nostress_starting_idx == 0:
             break
         else:
-            i -= 1
-    if appname in ['milc', 'noapp']:
-        stress_index["NO_STRESS"][0] = idx[i:]
-        return stress_index, i
-    # Use quantile to filter irregular qos value
+            nostress_starting_idx -= 1
+
+    # Use IRQ based method to filter irregular qos value in no_stress
     # milc cannot be filtered because of its large variance
-    idx = idx[i:]
-    QoS_label = ["count", "latency", "tps.1", "sent_speed", "received_speed"]
-    qos_filter = None
-    for qos_label in QoS_label:
-        if qos_label in df:
-            qos = df.iloc[idx][qos_label]
-            q1 = qos.quantile(0.2)
-            q3 = qos.quantile(0.8)
-            irq = (q3 - q1) * 2
-            inf = q1 - irq
-            sup = q3 + irq
-            if qos_filter is None:
-                qos_filter = (qos > inf) & (qos < sup)
-            else:
-                qos_filter &= ((qos > inf) & (qos < sup))
+    if appname in ['milc', 'noapp']:
+        stress_type_intensity_to_indices_map["NO_STRESS"][0] = indices[nostress_starting_idx:]
     
-    assert qos_filter is not None
-    stress_index["NO_STRESS"][0] = qos[qos_filter].index
-    return stress_index, i
+    else:
+        indices = indices[nostress_starting_idx:]
+        QoS_label = ["count", "latency", "tps.1", "sent_speed", "received_speed"]
+        qos_filter = None
+        for qos_label in QoS_label:
+            if qos_label in df.columns:
+                qos = df.loc[indices,qos_label]
+                q1 = qos.quantile(0.2)
+                q3 = qos.quantile(0.8)
+                irq = (q3 - q1) * 2
+                inf = q1 - irq
+                sup = q3 + irq
+                if qos_filter is None:
+                    qos_filter = (qos > inf) & (qos < sup)
+                else:
+                    qos_filter &= ((qos > inf) & (qos < sup))        
+
+        stress_type_intensity_to_indices_map["NO_STRESS"][0] = qos[qos_filter].index
+
+    return stress_type_intensity_to_indices_map, nostress_starting_idx
 
 
 def milc_drop_qos(df):
@@ -222,7 +225,7 @@ def data_transform(df, appname, max_total, drop_columns):
         start = keys.index("IPC") + 1
         end = keys.index("stress_type")
         QoS = keys[start: end]
-        QoS_nostress = df.loc[stress_df_index["NO_STRESS"][0]][QoS].mean()
+        QoS_nostress = df.loc[stress_df_index["NO_STRESS"][0],QoS].mean()
 
         df.loc[:, QoS] = df.loc[:, QoS] / QoS_nostress
 
