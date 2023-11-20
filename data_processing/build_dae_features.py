@@ -18,31 +18,49 @@ ALIOTH_OLD_KEYS = [
     'net_wr_byte', 'MBR', 'net_rd_byte', 'IPC'
 ]
 
-def build_DAE_features(df, save_name, feature_columns:List=None):
+def build_DAE_features(df, save_name, feature_columns:List=None,filter_out_no_degradation=False,filter_threshold=0.95,qos_metric='latency'):
     label_columns = ['app','workload','stress_type','stress_intensity','interval']
     if feature_columns is None:
         feature_columns = df.columns[1:-7]
     else:
         feature_columns = set(feature_columns).intersection(set(df.columns))
+    if filter_out_no_degradation:
+        tmp = df.loc[df['app']=='rabbitmq',['qos1','qos2']].apply(np.mean, axis=1)
+
+        if qos_metric == 'tps':
+            label = df.loc[:,'qos1'].to_frame('qos')
+            label.loc[df['app']=='rabbitmq','qos'] = tmp
+        elif qos_metric == 'latency':
+            label = 2 - df.loc[:,'qos2'].to_frame('qos')
+            label.loc[df['app']=='rabbitmq','qos'] = tmp
+            label.loc[df['app']=='milc','qos'] = df.loc[df['app']=='milc','qos1']
+        else:
+            raise ValueError
+
+        label.loc[label['qos']<0,'qos'] = 0
+        selected_idx = (label['qos'] < filter_threshold)
+    else:
+        selected_idx = np.ones(df.shape[0],dtype=bool)
     
     apps = pd.unique(df['app'])
     df_out=pd.DataFrame()
     for app in apps:
         workload_levels = pd.unique(df.loc[df['app']==app, 'workload'])
         for wl in workload_levels:
-            stress_metrics = df.loc[((df['app']==app) & (df['workload']==wl) & (df['stress_type']!='NO_STRESS')),feature_columns].reset_index(drop=True)
-            aux_labels = df.loc[((df['app']==app) & (df['workload']==wl) & (df['stress_type']!='NO_STRESS')),label_columns].reset_index(drop=True)
+            stress_metrics = df.loc[((df['app']==app) & (df['workload']==wl) & (df['stress_type']!='NO_STRESS') & selected_idx),feature_columns].reset_index(drop=True)
+            aux_labels = df.loc[((df['app']==app) & (df['workload']==wl) & (df['stress_type']!='NO_STRESS') & selected_idx),label_columns].reset_index(drop=True)
             no_stress_metrics = df.loc[((df['app']==app) & (df['workload']==wl) & (df['stress_type']=='NO_STRESS')),feature_columns].rename(columns={f:f+'.nostress' for f in feature_columns})
-            if no_stress_metrics.shape[0] == 1:
-                no_stress_metrics = pd.concat([no_stress_metrics for i in range(stress_metrics.shape[0])],axis=0).reset_index(drop=True)
-                tmp = pd.concat([stress_metrics,no_stress_metrics,aux_labels],axis=1)
-                df_out = pd.concat([df_out,tmp],axis=0)
-            else:
-                for j in range(no_stress_metrics.shape[0]):
-                    cur_row = no_stress_metrics.iloc[j,:]
-                    cur_row_expansion = pd.concat([cur_row for i in range(stress_metrics.shape[0])],axis=0)
-                    tmp = pd.concat([stress_metrics,cur_row_expansion,aux_labels],axis=1)
+            if stress_metrics.shape[0] > 0:
+                if no_stress_metrics.shape[0] == 1:
+                    no_stress_metrics = pd.concat([no_stress_metrics for i in range(stress_metrics.shape[0])],axis=0).reset_index(drop=True)
+                    tmp = pd.concat([stress_metrics,no_stress_metrics,aux_labels],axis=1)
                     df_out = pd.concat([df_out,tmp],axis=0)
+                else:
+                    for j in range(no_stress_metrics.shape[0]):
+                        cur_row = no_stress_metrics.iloc[j,:]
+                        cur_row_expansion = pd.concat([cur_row for i in range(stress_metrics.shape[0])],axis=0).reset_index(drop=True)
+                        tmp = pd.concat([stress_metrics,cur_row_expansion,aux_labels],axis=1)
+                        df_out = pd.concat([df_out,tmp],axis=0)
 
     df_out.to_csv(save_name,index=False)
 
@@ -63,6 +81,7 @@ if __name__ == '__main__':
 
     # No feature selection
     build_DAE_features(df, 'DAE_features_all_int3_nowarming_nosliding_mean.csv')
+    build_DAE_features(df, 'DAE_features_all_int3_nowarming_nosliding_mean_ltc095.csv',filter_out_no_degradation=True,filter_threshold=0.95,qos_metric='latency')
 
     # Online feature selection
     feature_columns = get_online_feature_columns(df.columns)
