@@ -227,24 +227,24 @@ if __name__ == '__main__':
     df_out.to_csv('./mul_all_intall_warming3_nosliding_all.csv', index=False)
 
 
-    # practical (with only mean-max-min) sliding
+    # # practical (with only mean-max-min) sliding
 
-    df_out = pd.DataFrame()
-    for i in intervals:
-        print('Dealing with interval =', i)
-        tmp = extract_temporal_feature(df, i)
-        df_out = pd.concat([df_out,tmp])
+    # df_out = pd.DataFrame()
+    # for i in intervals:
+    #     print('Dealing with interval =', i)
+    #     tmp = extract_temporal_feature(df, i)
+    #     df_out = pd.concat([df_out,tmp])
 
-    df_out.to_csv('./mul_all_intall_warming3_withsliding_mean-max-min.csv', index=False)
+    # df_out.to_csv('./mul_all_intall_warming3_withsliding_mean-max-min.csv', index=False)
 
-    # practical (with only mean-max-min) no sliding
+    # # practical (with only mean-max-min) no sliding
 
-    df_out = pd.DataFrame()
-    for i in intervals:
-        print('Dealing with interval =', i)
-        tmp = extract_temporal_feature(df, i, consecutive_sliding=False)
-        df_out = pd.concat([df_out,tmp])
+    # df_out = pd.DataFrame()
+    # for i in intervals:
+    #     print('Dealing with interval =', i)
+    #     tmp = extract_temporal_feature(df, i, consecutive_sliding=False)
+    #     df_out = pd.concat([df_out,tmp])
 
-    df_out.to_csv('./mul_all_intall_warming3_nosliding_mean-max-min.csv', index=False)
+    # df_out.to_csv('./mul_all_intall_warming3_nosliding_mean-max-min.csv', index=False)
 
 

@@ -23,7 +23,7 @@ def build_DAE_features(df, save_name, feature_columns:List=None,filter_out_no_de
     if feature_columns is None:
         feature_columns = df.columns[1:-7]
     else:
-        feature_columns = set(feature_columns).intersection(set(df.columns))
+        feature_columns = list(set(feature_columns).intersection(set(df.columns)))
     if filter_out_no_degradation:
         tmp = df.loc[df['app']=='rabbitmq',['qos1','qos2']].apply(np.mean, axis=1)
 
@@ -76,17 +76,17 @@ def get_online_feature_columns(cols):
 if __name__ == '__main__':
     os.chdir(DATADIR)
 
-    # original flavor of data preprocessing
-    df = pd.read_csv('mul_all_int3_nowarming_nosliding_mean.csv')
+    # # original flavor of data preprocessing
+    # df = pd.read_csv('mul_all_int3_nowarming_nosliding_mean.csv')
 
-    # No feature selection
-    build_DAE_features(df, 'DAE_features_all_int3_nowarming_nosliding_mean.csv')
-    build_DAE_features(df, 'DAE_features_all_int3_nowarming_nosliding_mean_ltc095.csv',filter_out_no_degradation=True,filter_threshold=0.95,qos_metric='latency')
+    # # No feature selection
+    # build_DAE_features(df, 'DAE_features_all_int3_nowarming_nosliding_mean.csv')
+    # build_DAE_features(df, 'DAE_features_all_int3_nowarming_nosliding_mean_ltc095.csv',filter_out_no_degradation=True,filter_threshold=0.95,qos_metric='latency')
 
-    # Online feature selection
-    feature_columns = get_online_feature_columns(df.columns)
+    # # Online feature selection
+    # feature_columns = get_online_feature_columns(df.columns)
     
-    build_DAE_features(df, 'DAE_features_online_int3_nowarming_nosliding_mean.csv', feature_columns=feature_columns)
+    # build_DAE_features(df, 'DAE_features_online_int3_nowarming_nosliding_mean.csv', feature_columns=feature_columns)
 
     # all-included no sliding
     df = pd.read_csv('mul_all_intall_warming3_nosliding_all.csv').drop_duplicates()

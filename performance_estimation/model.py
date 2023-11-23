@@ -12,6 +12,48 @@ from torch.autograd import Variable
 from easydict import EasyDict
 from typing import Dict, List
 # %%
+class Encoder(nn.Module):
+    def __init__(self, input_dim, output_dim=1) -> None:
+        super().__init__()
+        self.fc_stack = nn.Sequential(
+            nn.Linear(input_dim, 256),
+            nn.Dropout(0.25),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.Dropout(0.25),
+            nn.ReLU(),
+            nn.Linear(128, output_dim)
+        )
+
+    def forward(self, x):
+        x = self.fc_stack(x)
+        return x
+
+class Decoder(nn.Module):
+    def __init__(self, input_dim, output_dim=1) -> None:
+        super().__init__()
+        self.fc_stack = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.Dropout(0.25),
+            nn.ReLU(),
+            nn.Linear(64, output_dim)
+        )
+
+    def forward(self, x):
+        x = self.fc_stack(x)
+        return x
+
+class DAE_new(nn.Module):
+    def __init__(self, dim) -> None:
+        super().__init__()
+        self.encoder = Encoder(dim, 128)
+        self.decoder = Decoder(128, dim)
+    
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x
+
 class DAE(nn.Module):
     def __init__(self, args):
         super(DAE, self).__init__()
@@ -192,6 +234,7 @@ class CART_random_dataset(Dataset):
 class DAE_random_dataset(Dataset):
     def __init__(self, csv_file, selected_apps:List = None,  normalize='minmax'):
         raw_data = pd.read_csv(csv_file)
+        raw_data.drop(raw_data[raw_data['app']=='noapp'].index,inplace=True)
         if selected_apps is not None:
             raw_data = raw_data.loc[raw_data['app'].isin(selected_apps),:].reset_index(drop=True)
         if normalize == 'minmax':
@@ -214,7 +257,6 @@ class DAE_random_dataset(Dataset):
     def __getitem__(self, idx):
         return self.stressed_metrics[idx], self.label[idx]
  
-
 
 # %%
 # Test DAE
